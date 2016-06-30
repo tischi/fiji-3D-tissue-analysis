@@ -1,11 +1,24 @@
 # fiji-3D-tissue-analysis
-...
+
+## installation
+
+- install Fiji: http://fiji.sc/#download
+- dowload and unzip: https://github.com/tischi/fiji-3D-tissue-analysis/archive/master.zip
+- copy __AutoMic_JavaTools-1.0.0-08032016.jar__ to your Fiji plugins folder 
+- copy __3D-tissue-analysis.py__ into an arbiratry folder
+
 ## input data
+
 A folder with tif files. Each tif file must be an ImageJ Composite image (also called Hyperstack in ImageJ). Currently, each file must contain exactly 3 channels, but can contain an arbitrary number of z-slices. If the folder contains multiple such files they will all be analyze automatically.
 
 ## input parameters
-The user must specify a threshold intensity for each channel (th1, th2, th3). The same threshold intensities will be used for all images in the folder.
+
+The user must specify a threshold intensity for each channel. The same threshold intensities will be used for all images in the folder.
 
 ## computation
 
+...
+
 ## output
+
+There will be an interactive table at the bottom of your screen with the analysis results. __PAT__ means "Pixels Above Threshold" in the respective channel. __AND__ means that the pixels were above threshold in both channels. __OR__ means that the pixels were above threshold in either of the channels. 
