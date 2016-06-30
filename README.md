@@ -1,11 +1,13 @@
 # fiji-3D-tissue-analysis
 
-## installation
+## installation and running
 
 - install Fiji: http://fiji.sc/#download
 - dowload and unzip: https://github.com/tischi/fiji-3D-tissue-analysis/archive/master.zip
 - copy __AutoMic_JavaTools-1.0.0-08032016.jar__ to your Fiji plugins folder 
 - copy __3D-tissue-analysis.py__ into an arbiratry folder
+
+Drag&drop __3D-tissue-analysis.py__ onto Fiji. The script editor window will open. Click [Run] at the bottom of this window.
 
 ## input data
 
