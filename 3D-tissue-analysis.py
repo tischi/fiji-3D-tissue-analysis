@@ -163,22 +163,21 @@ def analyze(iDataSet, tbModel, p, output_folder):
   #
   # REGION SEGMENTATION
   #
-
+  # general issues:
+  # - intensity decreases along z
+  	
   impA = []
   sumIntensities = []
   sumIntensitiesBW = []
 
   nChannels = 3
   for iChannel in range(1,nChannels+1):
-
-  	# general issues:
-  	# - intensity decreases along z
   	
-    # measure total intensity
-    # - bg subtraction?
-    print("thresholding channel "+str(iChannel)+" with threshold "+str(p["th_ch"+str(iChannel)]))
+    # threshold
+    threshold_value = p["th_ch"+str(iChannel)]
+    print("thresholding channel "+str(iChannel)+" with threshold "+str(threshold_value))
     imp_c = extractChannel(imp, iChannel, 1)
-    imp_bw = threshold(imp_c, p["th_ch"+str(iChannel)]) 
+    imp_bw = threshold(imp_c, threshold_value) 
     
     # measure number of pixels containing a signification signal
     # - what is good here for thresholding and preprocessing?
@@ -188,6 +187,10 @@ def analyze(iDataSet, tbModel, p, output_folder):
     #impbw.show()
     impA.append(imp_bw)
     tbModel.setNumVal(round(measureSumIntensity3D(imp_bw)/255,0), iDataSet, "PAT_"+str(iChannel))
+    tbModel.setNumVal(round(measureSumIntensity3D(imp_c),0), iDataSet, "SumIntensity_"+str(iChannel))
+    tbModel.setNumVal(threshold_value, iDataSet, "TH_CH"+str(iChannel)) # also record the threshold used
+
+
 
   # Compute overlaps
   tbModel = compute_overlap(tbModel, iDataSet, impA, 1, 2)
@@ -289,7 +292,7 @@ if __name__ == '__main__':
   nChannels = 3
   for i in range(1,nChannels+1):
     p["th_ch"+str(i)] = 30
-
+  
     
   print(p)
    
@@ -299,9 +302,19 @@ if __name__ == '__main__':
   # POPULATE AND SHOW INTERACTIVE TABLE
   #
 
+  # thresholds
+  for i in range(1, nChannels+1):
+    tbModel.addValColumn("TH_CH"+str(i), "NUM")
+
+  # pixels above threshold (PAT)
   for i in range(1, nChannels+1):
     tbModel.addValColumn("PAT_"+str(i), "NUM")
 
+  # total intensity in whole stack (no masking and no bg-subtraction)
+  for i in range(1, nChannels+1):
+    tbModel.addValColumn("SumIntensity_"+str(i), "NUM")
+
+  # overlapping PATs in different channels  
   tbModel.addValColumn("PAT_1AND3", "NUM")
   tbModel.addValColumn("PAT_1AND2", "NUM")
   tbModel.addValColumn("PAT_2AND3", "NUM")
