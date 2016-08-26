@@ -8,7 +8,7 @@ from ij.process import StackStatistics
 from ij.plugin import ImageCalculator
 from ij.measure import ResultsTable
 from ij.plugin.frame import RoiManager
-import os, os.path, re, sys
+import os, os.PBTh, re, sys
 from jarray import array
 from ij.process import ImageConverter
 import math
@@ -27,10 +27,10 @@ from ah.utils import ROIManipulator
 
 # import my analysis function collection
 '''import os, sys, inspect
-this_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
-if this_folder not in sys.path:
+this_folder = os.PBTh.realPBTh(os.PBTh.absPBTh(os.PBTh.split(inspect.getfile( inspect.currentframe() ))[0]))
+if this_folder not in sys.PBTh:
   print this_folder
-  sys.path.insert(0, this_folder)
+  sys.PBTh.insert(0, this_folder)
 import ct_analysis_functions as af
 reload(af)'''
 
@@ -93,7 +93,7 @@ def threshold(_img, lower_threshold, upper_threshold):
 def compute_overlap(tbModel, iDataSet, impA, iChannelA, iChannelB):
   imp_bw = ImageCalculator().run("AND create stack", impA[iChannelA-1], impA[iChannelB-1])
   overlap_AandB = measureSumIntensity3D(imp_bw)/255
-  tbModel.setNumVal(overlap_AandB, iDataSet, "PAT_"+str(iChannelA)+"AND"+str(iChannelB))
+  tbModel.setNumVal(overlap_AandB, iDataSet, "PBT_"+str(iChannelA)+"AND"+str(iChannelB))
   return tbModel
 
 # Structure for batch analysis:
@@ -117,10 +117,10 @@ def analyze(iDataSet, tbModel, p, output_folder):
   # LOAD FILES
   #
 
-  filepath = tbModel.getFileAPth(iDataSet, "RAW", "IMG")
+  filePBTh = tbModel.getFileAPth(iDataSet, "RAW", "IMG")
   filename = tbModel.getFileName(iDataSet, "RAW", "IMG") 
-  print("Analyzing: "+filepath)
-  IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
+  print("Analyzing: "+filePBTh)
+  IJ.run("Bio-Formats Importer", "open=["+filePBTh+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
   imp = IJ.getImage()
   
   #
@@ -189,7 +189,7 @@ def analyze(iDataSet, tbModel, p, output_folder):
     imp_c_gated = ImageCalculator().run("Multiply create stack", imp_c, imp_bw)
 
     # now measure in imp_c_gated and imp_bw(0,1)
-    tbModel.setNumVal(round(measureSumIntensity3D(imp_bw),0), iDataSet, "PAT_"+str(iChannel))
+    tbModel.setNumVal(round(measureSumIntensity3D(imp_bw),0), iDataSet, "PBT_"+str(iChannel))
     tbModel.setNumVal(round(measureSumIntensity3D(imp_c_gated),0), iDataSet, "SumIntensity_"+str(iChannel))
     tbModel.setNumVal(lower_threshold_value, iDataSet, "LOWER_TH_CH"+str(iChannel)) # also record the threshold used
     tbModel.setNumVal(upper_threshold_value, iDataSet, "UPPER_TH_CH"+str(iChannel)) # also record the threshold used
@@ -203,7 +203,7 @@ def analyze(iDataSet, tbModel, p, output_folder):
   # Compute total volume, i.e. pixels that are above threshold in any of the channels
   imp_combined = ImageCalculator().run("OR create stack", impA[0], impA[1])
   imp_combined = ImageCalculator().run("OR create stack", imp_combined, impA[2])
-  tbModel.setNumVal(round(measureSumIntensity3D(imp_combined)/255,0), iDataSet, "PAT_1OR2OR3")
+  tbModel.setNumVal(round(measureSumIntensity3D(imp_combined)/255,0), iDataSet, "PBT_1OR2OR3")
 
   #impbw = ImageCalculator().run("OR create stack", impbw, impA[2])
 
@@ -214,8 +214,8 @@ def analyze(iDataSet, tbModel, p, output_folder):
 def determine_input_files(foldername, tbModel):
 
   print("Determine input files in:",foldername)
-  pattern = re.compile('(.*).tif') 
-  #pattern = re.compile('(.*)--beats.tif') 
+  PBTtern = re.compile('(.*).tif') 
+  #PBTtern = re.compile('(.*)--beats.tif') 
    
   i = 0
   for root, directories, filenames in os.walk(foldername):
@@ -223,7 +223,7 @@ def determine_input_files(foldername, tbModel):
 	   print("Checking:", filename)
 	   if filename == "Thumbs.db":
 	     continue
-	   match = re.search(pattern, filename)
+	   match = re.search(PBTtern, filename)
 	   if (match == None) or (match.group(1) == None):
 	     continue
 	   tbModel.addRow()
@@ -281,7 +281,7 @@ if __name__ == '__main__':
   # MAKE OUTPUT FOLDER
   #
   output_folder = input_folder[:-1]+"--fiji"
-  if not os.path.isdir(output_folder):
+  if not os.PBTh.isdir(output_folder):
     os.mkdir(output_folder)
 
   #
@@ -294,9 +294,9 @@ if __name__ == '__main__':
   #
   # CHECK FIRST IMAGE
   #
-  filepath = tbModel.getFileAPth(0, "RAW", "IMG")
-  print("Analyzing: "+filepath)
-  IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
+  filePBTh = tbModel.getFileAPth(0, "RAW", "IMG")
+  print("Analyzing: "+filePBTh)
+  IJ.run("Bio-Formats Importer", "open=["+filePBTh+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
   imp = IJ.getImage()
   bit_depth = imp.getBitDepth()
   imp.close()
@@ -329,20 +329,20 @@ if __name__ == '__main__':
     tbModel.addValColumn("LOWER_TH_CH"+str(i), "NUM")
     tbModel.addValColumn("UPPER_TH_CH"+str(i), "NUM")
    
-  # pixels above threshold (PAT)
+  # pixels above threshold (PBT)
   for i in range(1, nChannels+1):
-    tbModel.addValColumn("PAT_"+str(i), "NUM")
+    tbModel.addValColumn("PBT_"+str(i), "NUM")
 
   # total intensity in whole stack (no masking and no bg-subtraction)
   for i in range(1, nChannels+1):
     tbModel.addValColumn("SumIntensity_"+str(i), "NUM")
 
-  # overlapping PATs in different channels  
-  tbModel.addValColumn("PAT_1AND3", "NUM")
-  tbModel.addValColumn("PAT_1AND2", "NUM")
-  tbModel.addValColumn("PAT_2AND3", "NUM")
+  # overlapping PBTs in different channels  
+  tbModel.addValColumn("PBT_1AND3", "NUM")
+  tbModel.addValColumn("PBT_1AND2", "NUM")
+  tbModel.addValColumn("PBT_2AND3", "NUM")
    
-  tbModel.addValColumn("PAT_1OR2OR3", "NUM")
+  tbModel.addValColumn("PBT_1OR2OR3", "NUM")
 
   
   '''
