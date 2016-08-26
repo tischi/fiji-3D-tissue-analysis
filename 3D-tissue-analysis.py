@@ -8,7 +8,7 @@ from ij.process import StackStatistics
 from ij.plugin import ImageCalculator
 from ij.measure import ResultsTable
 from ij.plugin.frame import RoiManager
-import os, os.PBTh, re, sys
+import os, os.path, re, sys
 from jarray import array
 from ij.process import ImageConverter
 import math
@@ -27,10 +27,10 @@ from ah.utils import ROIManipulator
 
 # import my analysis function collection
 '''import os, sys, inspect
-this_folder = os.PBTh.realPBTh(os.PBTh.absPBTh(os.PBTh.split(inspect.getfile( inspect.currentframe() ))[0]))
-if this_folder not in sys.PBTh:
+this_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
+if this_folder not in sys.path:
   print this_folder
-  sys.PBTh.insert(0, this_folder)
+  sys.path.insert(0, this_folder)
 import ct_analysis_functions as af
 reload(af)'''
 
@@ -117,10 +117,10 @@ def analyze(iDataSet, tbModel, p, output_folder):
   # LOAD FILES
   #
 
-  filePBTh = tbModel.getFileAPth(iDataSet, "RAW", "IMG")
+  filepath = tbModel.getFileAPth(iDataSet, "RAW", "IMG")
   filename = tbModel.getFileName(iDataSet, "RAW", "IMG") 
-  print("Analyzing: "+filePBTh)
-  IJ.run("Bio-Formats Importer", "open=["+filePBTh+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
+  print("Analyzing: "+filepath)
+  IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
   imp = IJ.getImage()
   
   #
@@ -281,7 +281,7 @@ if __name__ == '__main__':
   # MAKE OUTPUT FOLDER
   #
   output_folder = input_folder[:-1]+"--fiji"
-  if not os.PBTh.isdir(output_folder):
+  if not os.path.isdir(output_folder):
     os.mkdir(output_folder)
 
   #
@@ -294,9 +294,9 @@ if __name__ == '__main__':
   #
   # CHECK FIRST IMAGE
   #
-  filePBTh = tbModel.getFileAPth(0, "RAW", "IMG")
-  print("Analyzing: "+filePBTh)
-  IJ.run("Bio-Formats Importer", "open=["+filePBTh+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
+  filepath = tbModel.getFileAPth(0, "RAW", "IMG")
+  print("Analyzing: "+filepath)
+  IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
   imp = IJ.getImage()
   bit_depth = imp.getBitDepth()
   imp.close()
