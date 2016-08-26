@@ -79,11 +79,11 @@ def autoThreshold(imp, method):
   impout.setTitle("Auto Threshold")
   return impout
 
-def threshold(_img, threshold):
+def threshold(_img, lower_threshold, upper_threshold):
   imp = Duplicator().run(_img)
   #imp.show(); time.sleep(0.2)
   #IJ.setThreshold(imp, mpar['lthr'], mpar['uthr'])
-  IJ.setThreshold(imp, threshold, 1000000000)
+  IJ.setThreshold(imp, lower_threshold, upper_threshold)
   IJ.run(imp, "Convert to Mask", "stack")
   imp.setTitle("Threshold");
   #IJ.run(imp, "Divide...", "value=255 stack");
@@ -173,34 +173,37 @@ def analyze(iDataSet, tbModel, p, output_folder):
   nChannels = 3
   for iChannel in range(1,nChannels+1):
   	
-    # threshold
-    threshold_value = p["th_ch"+str(iChannel)]
-    print("thresholding channel "+str(iChannel)+" with threshold "+str(threshold_value))
+    # gating
+    lower_threshold_value = p["lower_th_ch"+str(iChannel)]
+    upper_threshold_value = p["upper_th_ch"+str(iChannel)]
+    print("gating channel "+str(iChannel)+" with values from "+str(lower_threshold_value)+" to "+str(upper_threshold_value))
     imp_c = extractChannel(imp, iChannel, 1)
-    imp_bw = threshold(imp_c, threshold_value) 
+    imp_bw = threshold(imp_c, lower_threshold_value, upper_threshold_value) 
+    impA.append(imp_bw)  # store the binary mask (0, 255) for OR operations later
+
+
+    # convert from 0,255 to 0,1
+    IJ.run(imp_bw, "Divide...", "value=255 stack"); 
     
-    # measure number of pixels containing a signification signal
-    # - what is good here for thresholding and preprocessing?
-    #impbw = autoThreshold(impc, "Default")
-    
-    #impbw.setTitle("bw"+str(iChannel))
-    #impbw.show()
-    impA.append(imp_bw)
-    tbModel.setNumVal(round(measureSumIntensity3D(imp_bw)/255,0), iDataSet, "PAT_"+str(iChannel))
-    tbModel.setNumVal(round(measureSumIntensity3D(imp_c),0), iDataSet, "SumIntensity_"+str(iChannel))
-    tbModel.setNumVal(threshold_value, iDataSet, "TH_CH"+str(iChannel)) # also record the threshold used
+    # set all pixels in the intensity image to zero that are not within the gate
+    imp_c_gated = ImageCalculator().run("Multiply create stack", imp_c, imp_bw)
+
+    # now measure in imp_c_gated and imp_bw(0,1)
+    tbModel.setNumVal(round(measureSumIntensity3D(imp_bw),0), iDataSet, "PAT_"+str(iChannel))
+    tbModel.setNumVal(round(measureSumIntensity3D(imp_c_gated),0), iDataSet, "SumIntensity_"+str(iChannel))
+    tbModel.setNumVal(lower_threshold_value, iDataSet, "LOWER_TH_CH"+str(iChannel)) # also record the threshold used
+    tbModel.setNumVal(upper_threshold_value, iDataSet, "UPPER_TH_CH"+str(iChannel)) # also record the threshold used
 
 
-
-  # Compute overlaps
+  # Compute overlaps of binary images
   tbModel = compute_overlap(tbModel, iDataSet, impA, 1, 2)
   tbModel = compute_overlap(tbModel, iDataSet, impA, 2, 3) 
   tbModel = compute_overlap(tbModel, iDataSet, impA, 1, 3)
 
   # Compute total volume, i.e. pixels that are above threshold in any of the channels
-  imp_bw = ImageCalculator().run("OR create stack", impA[0], impA[1])
-  imp_bw = ImageCalculator().run("OR create stack", imp_bw, impA[2])
-  tbModel.setNumVal(round(measureSumIntensity3D(imp_bw)/255,0), iDataSet, "PAT_1OR2OR3")
+  imp_combined = ImageCalculator().run("OR create stack", impA[0], impA[1])
+  imp_combined = ImageCalculator().run("OR create stack", imp_combined, impA[2])
+  tbModel.setNumVal(round(measureSumIntensity3D(imp_combined)/255,0), iDataSet, "PAT_1OR2OR3")
 
   #impbw = ImageCalculator().run("OR create stack", impbw, impA[2])
 
@@ -234,21 +237,24 @@ def determine_input_files(foldername, tbModel):
 #
 # GET PARAMETERS
 #
-def get_parameters(p, num_data_sets):
+def get_parameters(p, keys, num_data_sets):
   gd = GenericDialog("Please enter parameters")
 
   gd.addMessage("Found "+str(num_data_sets)+" data sets")
   gd.addStringField("analyse", "all");
 
   gd.addMessage("Image analysis parameters:")
-  for k in p.keys():
+  gd.addMessage("Please note: the threshold values are inclusive!\nThus, to exlude pixels with value 255 the upper threshold needs to be 254")
+  
+  
+  for k in keys:
     gd.addNumericField(k, p[k], 2);
   gd.showDialog()
   if gd.wasCanceled():
     return
 
   to_be_analyzed = gd.getNextString()
-  for k in p.keys():
+  for k in keys:
     p[k] = gd.getNextNumber()
     
   return to_be_analyzed, p
@@ -286,17 +292,33 @@ if __name__ == '__main__':
   tbModel = determine_input_files(input_folder, tbModel)
 
   #
+  # CHECK FIRST IMAGE
+  #
+  filepath = tbModel.getFileAPth(0, "RAW", "IMG")
+  print("Analyzing: "+filepath)
+  IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
+  imp = IJ.getImage()
+  bit_depth = imp.getBitDepth()
+  imp.close()
+  
+  
+  #
   # GET PARAMETERS
   #
   p = dict()
+  keys = list() # necessary to have the correct order in the gui
   nChannels = 3
   for i in range(1,nChannels+1):
-    p["th_ch"+str(i)] = 30
-  
+    p["lower_th_ch"+str(i)] = 30; keys.append("lower_th_ch"+str(i))
+    if bit_depth==8:
+      p["upper_th_ch"+str(i)] = 254; keys.append("upper_th_ch"+str(i))
+    elif bit_depth==16:
+      p["upper_th_ch"+str(i)] = 65534; keys.append("upper_th_ch"+str(i))
+    else:
+      IJ.log("ERROR: unknown bit depth!")
+      sys.exit(0)
     
-  print(p)
-   
-  to_be_analyzed, p = get_parameters(p, tbModel.getRowCount())
+  to_be_analyzed, p = get_parameters(p, keys, tbModel.getRowCount())
 
   #
   # POPULATE AND SHOW INTERACTIVE TABLE
@@ -304,8 +326,9 @@ if __name__ == '__main__':
 
   # thresholds
   for i in range(1, nChannels+1):
-    tbModel.addValColumn("TH_CH"+str(i), "NUM")
-
+    tbModel.addValColumn("LOWER_TH_CH"+str(i), "NUM")
+    tbModel.addValColumn("UPPER_TH_CH"+str(i), "NUM")
+   
   # pixels above threshold (PAT)
   for i in range(1, nChannels+1):
     tbModel.addValColumn("PAT_"+str(i), "NUM")
