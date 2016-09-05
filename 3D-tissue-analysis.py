@@ -181,15 +181,15 @@ def analyze(iDataSet, tbModel, p, output_folder):
     imp_bw = threshold(imp_c, lower_threshold_value, upper_threshold_value) 
     impA.append(imp_bw)  # store the binary mask (0, 255) for OR operations later
 
-
-    # convert from 0,255 to 0,1
-    IJ.run(imp_bw, "Divide...", "value=255 stack"); 
+    # convert from 0,255 to 0,1 for the following calculations
+    imp_01 = imp_bw.duplicate()
+    IJ.run(imp_01, "Divide...", "value=255 stack"); 
     
     # set all pixels in the intensity image to zero that are not within the gate
-    imp_c_gated = ImageCalculator().run("Multiply create stack", imp_c, imp_bw)
+    imp_c_gated = ImageCalculator().run("Multiply create stack", imp_c, imp_01)
 
     # now measure in imp_c_gated and imp_bw(0,1)
-    tbModel.setNumVal(round(measureSumIntensity3D(imp_bw),0), iDataSet, "PBT_"+str(iChannel))
+    tbModel.setNumVal(round(measureSumIntensity3D(imp_01),0), iDataSet, "PBT_"+str(iChannel))
     tbModel.setNumVal(round(measureSumIntensity3D(imp_c_gated),0), iDataSet, "SumIntensity_"+str(iChannel))
     tbModel.setNumVal(lower_threshold_value, iDataSet, "LOWER_TH_CH"+str(iChannel)) # also record the threshold used
     tbModel.setNumVal(upper_threshold_value, iDataSet, "UPPER_TH_CH"+str(iChannel)) # also record the threshold used
