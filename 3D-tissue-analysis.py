@@ -215,13 +215,14 @@ def determine_input_files(foldername, tbModel):
 
   print("Determine input files in:",foldername)
   PBTtern = re.compile('(.*).tif') 
+  
   #PBTtern = re.compile('(.*)--beats.tif') 
    
   i = 0
   for root, directories, filenames in os.walk(foldername):
 	for filename in filenames:
 	   print("Checking:", filename)
-	   if filename == "Thumbs.db":
+	   if (filename == "Thumbs.db") or filename.startswith('.'):
 	     continue
 	   match = re.search(PBTtern, filename)
 	   if (match == None) or (match.group(1) == None):
@@ -290,7 +291,7 @@ if __name__ == '__main__':
   tbModel = TableModel(input_folder)
   tbModel.addFileColumns('RAW','IMG')
   tbModel = determine_input_files(input_folder, tbModel)
-
+  
   #
   # CHECK FIRST IMAGE
   #
