@@ -21,8 +21,8 @@ from loci.plugins.in import ImporterOptions
 
 from automic.table import TableModel			# this class stores the data for the table
 from automic.table import ManualControlFrame 	#this class visualises TableModel via GUI
+from automic.utils.roi import ROIManipulator2D as ROIManipulator
 from java.io import File
-from ah.utils import ROIManipulator
 
 
 # import my analysis function collection
@@ -93,7 +93,7 @@ def threshold(_img, lower_threshold, upper_threshold):
 def compute_overlap(tbModel, iDataSet, impA, iChannelA, iChannelB):
   imp_bw = ImageCalculator().run("AND create stack", impA[iChannelA-1], impA[iChannelB-1])
   overlap_AandB = measureSumIntensity3D(imp_bw)/255
-  tbModel.setNumVal(overlap_AandB, iDataSet, "PBT_"+str(iChannelA)+"AND"+str(iChannelB))
+  tbModel.setNumericValue(overlap_AandB, iDataSet, "PBT_"+str(iChannelA)+"AND"+str(iChannelB))
   return tbModel
 
 # Structure for batch analysis:
@@ -117,7 +117,7 @@ def analyze(iDataSet, tbModel, p, output_folder):
   # LOAD FILES
   #
 
-  filepath = tbModel.getFileAPth(iDataSet, "RAW", "IMG")
+  filepath = tbModel.getFileAbsolutePathString(iDataSet, "RAW", "IMG")
   filename = tbModel.getFileName(iDataSet, "RAW", "IMG") 
   print("Analyzing: "+filepath)
   IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
@@ -180,7 +180,12 @@ def analyze(iDataSet, tbModel, p, output_folder):
     imp_c = extractChannel(imp, iChannel, 1)
     imp_bw = threshold(imp_c, lower_threshold_value, upper_threshold_value) 
     impA.append(imp_bw)  # store the binary mask (0, 255) for OR operations later
-
+    
+    # save binary image
+    output_filename = "BW_Ch"+str(iChannel)+"--"+filename
+    IJ.saveAs(imp_bw, "Tiff", os.path.join(output_folder,output_filename))
+    tbModel.setFileAbsolutePath(output_folder, output_filename, iDataSet, "BW_"+str(iChannel), "IMG")
+      
     # convert from 0,255 to 0,1 for the following calculations
     imp_01 = imp_bw.duplicate()
     IJ.run(imp_01, "Divide...", "value=255 stack"); 
@@ -188,12 +193,18 @@ def analyze(iDataSet, tbModel, p, output_folder):
     # set all pixels in the intensity image to zero that are not within the gate
     imp_c_gated = ImageCalculator().run("Multiply create stack", imp_c, imp_01)
 
+    # save gated image
+    output_filename = "GATED_Ch"+str(iChannel)+"--"+filename
+    IJ.saveAs(imp_c_gated, "Tiff", os.path.join(output_folder,output_filename))
+    tbModel.setFileAbsolutePath(output_folder, output_filename, iDataSet, "GATED_"+str(iChannel), "IMG")
+    
     # now measure in imp_c_gated and imp_bw(0,1)
-    tbModel.setNumVal(round(measureSumIntensity3D(imp_01),0), iDataSet, "PBT_"+str(iChannel))
-    tbModel.setNumVal(round(measureSumIntensity3D(imp_c_gated),0), iDataSet, "SumIntensity_"+str(iChannel))
-    tbModel.setNumVal(lower_threshold_value, iDataSet, "LOWER_TH_CH"+str(iChannel)) # also record the threshold used
-    tbModel.setNumVal(upper_threshold_value, iDataSet, "UPPER_TH_CH"+str(iChannel)) # also record the threshold used
-
+    tbModel.setNumericValue(round(measureSumIntensity3D(imp_01),0), iDataSet, "PBT_"+str(iChannel))
+    tbModel.setNumericValue(round(measureSumIntensity3D(imp_c_gated),0), iDataSet, "SumIntensity_"+str(iChannel))
+    tbModel.setNumericValue(lower_threshold_value, iDataSet, "LOWER_TH_CH"+str(iChannel)) # also record the threshold used
+    tbModel.setNumericValue(upper_threshold_value, iDataSet, "UPPER_TH_CH"+str(iChannel)) # also record the threshold used
+    
+    
 
   # Compute overlaps of binary images
   tbModel = compute_overlap(tbModel, iDataSet, impA, 1, 2)
@@ -203,8 +214,10 @@ def analyze(iDataSet, tbModel, p, output_folder):
   # Compute total volume, i.e. pixels that are above threshold in any of the channels
   imp_combined = ImageCalculator().run("OR create stack", impA[0], impA[1])
   imp_combined = ImageCalculator().run("OR create stack", imp_combined, impA[2])
-  tbModel.setNumVal(round(measureSumIntensity3D(imp_combined)/255,0), iDataSet, "PBT_1OR2OR3")
-
+  tbModel.setNumericValue(round(measureSumIntensity3D(imp_combined)/255,0), iDataSet, "PBT_1OR2OR3")
+  
+  
+  
   #impbw = ImageCalculator().run("OR create stack", impbw, impA[2])
 
 
@@ -228,7 +241,7 @@ def determine_input_files(foldername, tbModel):
 	   if (match == None) or (match.group(1) == None):
 	     continue
 	   tbModel.addRow()
-	   tbModel.setFileAPth(foldername, filename, i, "RAW","IMG")
+	   tbModel.setFileAbsolutePath(foldername, filename, i, "RAW","IMG")
 	   print("Accepted:", filename)
 	   
 	   i += 1
@@ -295,7 +308,7 @@ if __name__ == '__main__':
   #
   # CHECK FIRST IMAGE
   #
-  filepath = tbModel.getFileAPth(0, "RAW", "IMG")
+  filepath = tbModel.getFileAbsolutePathString(0, "RAW", "IMG")
   print("Analyzing: "+filepath)
   IJ.run("Bio-Formats Importer", "open=["+filepath+"] color_mode=Default view=Hyperstack stack_order=XYCZT");
   imp = IJ.getImage()
@@ -327,29 +340,27 @@ if __name__ == '__main__':
 
   # thresholds
   for i in range(1, nChannels+1):
-    tbModel.addValColumn("LOWER_TH_CH"+str(i), "NUM")
-    tbModel.addValColumn("UPPER_TH_CH"+str(i), "NUM")
+    tbModel.addValueColumn("LOWER_TH_CH"+str(i), "NUM")
+    tbModel.addValueColumn("UPPER_TH_CH"+str(i), "NUM")
    
   # pixels above threshold (PBT)
   for i in range(1, nChannels+1):
-    tbModel.addValColumn("PBT_"+str(i), "NUM")
+    tbModel.addValueColumn("PBT_"+str(i), "NUM")
 
   # total intensity in whole stack (no masking and no bg-subtraction)
   for i in range(1, nChannels+1):
-    tbModel.addValColumn("SumIntensity_"+str(i), "NUM")
+    tbModel.addValueColumn("SumIntensity_"+str(i), "NUM")
 
-  # overlapping PBTs in different channels  
-  tbModel.addValColumn("PBT_1AND3", "NUM")
-  tbModel.addValColumn("PBT_1AND2", "NUM")
-  tbModel.addValColumn("PBT_2AND3", "NUM")
-   
-  tbModel.addValColumn("PBT_1OR2OR3", "NUM")
-
+  # overlapping PBTs in different channels
+  tbModel.addValueColumn("PBT_1AND3", "NUM")
+  tbModel.addValueColumn("PBT_1AND2", "NUM")
+  tbModel.addValueColumn("PBT_2AND3", "NUM")
+  tbModel.addValueColumn("PBT_1OR2OR3", "NUM")
   
-  '''
-  for i in range(p["n_rois"]):
-    tbModel.addFileColumns('FFT_R'+str(i+1),'IMG')
-  '''
+  # binary and gated output images
+  for i in range(1, nChannels+1):
+    tbModel.addFileColumns('BW_'+str(i),'IMG')
+    tbModel.addFileColumns('GATED_'+str(i),'IMG')
   
   frame=ManualControlFrame(tbModel)
   frame.setVisible(True)
