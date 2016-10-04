@@ -15,7 +15,7 @@ A folder with tif files. Each tif file must be an ImageJ Composite image (also c
 
 ## input parameters
 
-The user must specify a threshold intensity for each channel. The same threshold intensities will be used for all images in the folder.
+The user must specify an lower and an upper threshold intensity for each channel. The same threshold intensities will be used for all images in the folder.
 
 ## computation
 
@@ -23,4 +23,4 @@ The user must specify a threshold intensity for each channel. The same threshold
 
 ## output
 
-There will be an interactive table at the bottom of your screen with the analysis results. __PAT__ means "Pixels Above Threshold" in the respective channel. __AND__ means that the pixels were above threshold in both channels. __OR__ means that the pixels were above threshold in either of the channels. 
+There will be an interactive table at the bottom of your screen with the analysis results. __PBT__ means "Pixels Between Thresholds" in the respective channel. __AND__ means that the pixels were selected in both channels. __OR__ means that the pixels were only selected in either of the channels. 
